@@ -15,25 +15,42 @@ const configuration = new Configuration({
 });
 const openai = new OpenAIApi(configuration);
 
+app.get('/models', async (req, res) => {
+    console.log("Fetching models")
+    await fetch('https://api.openai.com/v1/models', {
+        method: 'GET',
+        headers: {
+            'Authorization': 'Bearer ' + process.env.OPENAI_API_KEY,
+            'Content-Type': 'application/json'
+        }
+    })
+        .then(response => response.json())
+        .then(data => {
+            const modelNames = data.data.map(model => model.root);
+            res.json(modelNames);
+        })
+});
 
-app.post('/summarize', async (req, res) => {
+app.post('/getOpenAIRes', async (req, res) => {
+    console.log("Getting response from OpenAI")
+    const { model, prompt, temperature, max_tokens, top_p, frequency_penalty, presence_penalty } = req.body.data;
     try {
         const response = await openai.createCompletion({
-            model: "text-davinci-003",
-            prompt: "Summarize the following text:\n\n" + req.body.text + "\n\n",
-            temperature: 0.7,
-            max_tokens: 256,
-            top_p: 1,
-            frequency_penalty: 0,
-            presence_penalty: 0,
+            model: model,
+            prompt: prompt,
+            temperature: temperature,
+            max_tokens: max_tokens,
+            top_p: top_p,
+            frequency_penalty: frequency_penalty,
+            presence_penalty: presence_penalty
         });
-        const summary = response.data.choices[0].text;
-        res.json({ summary });
+        console.log(response.data.choices[0].text)
+        res.json({ response: response.data.choices[0].text });
     } catch (error) {
-        console.error('Error while fetching summarized text:', error);
-        res.status(500).json({ error: 'Failed to fetch summarized text' });
+        res.json({ response: "Model isn't suitable for this type of application." });
     }
 });
+
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
